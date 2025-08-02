@@ -1,3 +1,5 @@
+"use client";
+
 import { Profile } from "@/types";
 import { createClient } from "@supabase/supabase-js";
 
@@ -86,4 +88,52 @@ export async function getProfileWithProfileId(
     console.error("Unexpected error in getProfile:", error);
     return null;
   }
+}
+interface UpdateProfileInput {
+  profileId: string;
+  availability?: { day: string; startTime: string; endTime: string }[];
+  subjectsOfInterest?: string[];
+  languagesSpoken?: string[]; // Make sure this exists in your DB
+}
+//{
+// profileId,
+//   availability,
+//   subjectsOfInterest,
+//   languagesSpoken,
+// }
+
+export async function updateProfileDetails(
+  d: UpdateProfileInput
+): Promise<{ success: boolean; error?: string }> {
+  console.log("data: ", d);
+  return;
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.SUPABASE_SERVICE_ROLE_KEY
+  ) {
+    throw new Error("Missing Supabase environment variables");
+  }
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+
+  const updates: Record<string, any> = {};
+  if (availability !== undefined) updates.availability = availability;
+  if (subjectsOfInterest !== undefined)
+    updates.subjects_of_interest = subjectsOfInterest;
+  if (languagesSpoken !== undefined) updates.languages_spoken = languagesSpoken;
+
+  const { error } = await supabase
+    .from("Profiles")
+    .update(updates)
+    .eq("id", profileId);
+
+  if (error) {
+    console.error("Error updating profile:", error.message);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
 }

@@ -12,6 +12,7 @@
     "@hookform/resolvers": "^3.9.0",
     "@next-auth/supabase-adapter": "^0.2.1",
     "@radix-ui/react-alert-dialog": "^1.1.6",
+    "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-hover-card": "^1.1.6",
@@ -21,7 +22,7 @@
     "@radix-ui/react-scroll-area": "^1.2.3",
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-separator": "^1.1.1",
-    "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.1.2",
     "@radix-ui/react-toast": "^1.2.13",
     "@radix-ui/react-tooltip": "^1.1.2",
@@ -54,11 +55,10 @@
     "recharts": "^2.15.1",
     "resend": "^4.5.1",
     "ssr": "^6.2.78",
-    "supabase": "^1.191.3",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "upstash": "^0.0.1",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@swc/cli": "^0.4.0",
@@ -73,6 +73,7 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
     "postcss": "^8",
+    "supabase": "^2.33.7",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }
