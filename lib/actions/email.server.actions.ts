@@ -2,7 +2,7 @@ import { Session } from "@/types";
 import { Client } from "@upstash/qstash";
 import { createClient } from "@supabase/supabase-js";
 import { Profile } from "@/types";
-import { getProfileWithProfileId } from "./profile.server.actions";
+import { getProfileWithProfileId } from "./profile.actions";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export async function fetchScheduledMessages() {

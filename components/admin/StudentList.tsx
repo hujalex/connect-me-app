@@ -45,7 +45,6 @@ import {
 import { getProfile } from "@/lib/actions/user.actions";
 import {
   getAllProfiles,
-  addStudent,
   deactivateUser,
   reactivateUser,
   deleteUser,
@@ -53,6 +52,7 @@ import {
   getUserFromId,
   resendEmailConfirmation,
 } from "@/lib/actions/admin.actions";
+import { addUser } from "@/lib/actions/auth.actions";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Profile } from "@/types";
 import {
@@ -308,7 +308,7 @@ const StudentList = () =>
       try {
         setAddingStudent(true);
         // Ensure addStudent returns a Profile
-        const addedStudent: Profile = await addStudent(newStudent);
+        const addedStudent: Profile = await addUser(newStudent, "Student");
 
         // Update local state
         setStudents((prevStudents) => {

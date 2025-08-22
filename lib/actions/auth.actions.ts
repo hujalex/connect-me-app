@@ -46,7 +46,7 @@ export const addTutor = async (
   let userId: string | null = null;
   try {
     if (!tutorData.email) {
-      throw new Error("Email is required to create a student profile");
+      throw new Error("Email is required to create a tutor profile");
     }
 
     const lowerCaseEmail = tutorData.email.toLowerCase().trim();

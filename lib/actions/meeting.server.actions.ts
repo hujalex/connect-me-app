@@ -1,19 +1,11 @@
+"use server";
 import { Meeting } from "@/types";
 import { createClient } from "@supabase/supabase-js";
+import { getSupabase } from "../supabase-server/serverClient";
 
 export async function getMeeting(id: string): Promise<Meeting | null> {
   try {
-    if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      !process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ) {
-      throw new Error("Missing Supabase environment variables");
-    }
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const supabase = getSupabase();
     // Fetch meeting details from Supabase
     const { data, error } = await supabase
       .from("Meetings")

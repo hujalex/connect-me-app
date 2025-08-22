@@ -4,23 +4,13 @@ import { Profile } from "@/types";
 import { createClient } from "@supabase/supabase-js";
 import { addMinutes, subMinutes, parseISO } from "date-fns";
 import { scheduleEmail } from "@/lib/actions/email.server.actions";
+import { getSupabase } from "@/lib/supabase-server/serverClient";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      !process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ) {
-      throw new Error("Missing Supabase environment variables");
-    }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const supabase = getSupabase();
 
     const data = await request.json();
     const session: Session = data.session;
@@ -36,7 +26,6 @@ export async function POST(request: NextRequest) {
     // const sessionDate = new Date();
 
     const scheduledTime = subMinutes(sessionDate, 15);
-
 
     const tutorName: string = tutor
       ? ` ${tutor.firstName} ${tutor.lastName}`
@@ -56,7 +45,6 @@ export async function POST(request: NextRequest) {
     });
 
     if (result && result.messageId) {
-
       const { data, error } = await supabase
         .from("Emails")
         .insert({

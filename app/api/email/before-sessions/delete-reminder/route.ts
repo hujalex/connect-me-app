@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { deleteMsg } from "@/lib/actions/email.server.actions";
+import { getSupabase } from "@/lib/supabase-server/serverClient";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      !process.env.SUPABASE_SERVICE_ROLE_KEY
-    ) {
-      throw new Error("Invalid Credentials");
-    }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const supabase = getSupabase();
 
     const data = await request.json();
     const sessionId = data.sessionId;
@@ -58,7 +49,6 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-
 
     await deleteMsg(emailData.message_id);
 
