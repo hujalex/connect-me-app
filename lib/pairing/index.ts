@@ -163,7 +163,9 @@ export const runPairingWorkflow = async () => {
         ({ similarity }) => similarity
       )
     );
-  const r2 = await supabase.from("pairing_logs").insert(logs);
+  const r2 = await supabase
+    .from("pairing_logs")
+    .insert(logs.filter((log) => !log.error));
   console.log(r1, r2);
   console.log("PAIRINGS ENDING");
 };

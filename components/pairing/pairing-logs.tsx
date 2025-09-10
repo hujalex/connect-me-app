@@ -47,82 +47,6 @@ export type PairingLog = {
   created_at: string;
 };
 
-const mockLogs: PairingLog[] = [
-  {
-    id: "1",
-    type: "pairing-match",
-    profile: {
-      firstName: "Alice",
-      lastName: "Johnson",
-      role: "student",
-    },
-    message:
-      "Successfully matched with tutor Bob Smith for Math tutoring session",
-    status: "matched",
-    createdAt: "2025-01-15T10:30:00Z",
-  },
-  {
-    id: "2",
-    type: "pairing-match-accepted",
-    profile: {
-      firstName: "Bob",
-      lastName: "Smith",
-      role: "tutor",
-    },
-    message: "Tutor accepted pairing request from Alice Johnson",
-    status: "accepted",
-    createdAt: "2025-01-15T10:32:00Z",
-  },
-  {
-    id: "3",
-    type: "pairing-match-accepted",
-    profile: {
-      firstName: "Alice",
-      lastName: "Johnson",
-      role: "student",
-    },
-    message: "Student confirmed pairing with tutor Bob Smith",
-    status: "confirmed",
-    createdAt: "2025-01-15T10:33:00Z",
-  },
-  {
-    id: "4",
-    type: "pairing-match-rejected",
-    profile: {
-      firstName: "Carol",
-      lastName: "Davis",
-      role: "tutor",
-    },
-    message: "Tutor declined pairing request due to scheduling conflict",
-    status: "declined",
-    createdAt: "2025-01-15T10:35:00Z",
-  },
-  {
-    id: "5",
-    type: "pairing-selection-failed",
-    profile: {
-      firstName: "David",
-      lastName: "Wilson",
-      role: "student",
-    },
-    message: "No suitable tutors available for requested subject and time slot",
-    status: "failed",
-    createdAt: "2025-01-15T10:36:00Z",
-  },
-  {
-    id: "6",
-    type: "pairing-match",
-    profile: {
-      firstName: "Emma",
-      lastName: "Brown",
-      role: "student",
-    },
-    message: "New pairing created with tutor Michael Chen for Science session",
-    status: "pending",
-    createdAt: "2025-01-15T10:40:00Z",
-  },
-];
-
 const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
     case "pending":
@@ -203,7 +127,7 @@ export function PairingLogsTable() {
   // Filter logs based on current filter settings
   const filteredLogs = logs.filter((log) => {
     if (filterType !== "all" && log.type !== filterType) return false;
-    if (filterUserType !== "all" && log.profile.role !== filterUserType)
+    if (filterUserType !== "all" && log?.profile?.role !== filterUserType)
       return false;
     if (
       filterStatus !== "all" &&
@@ -232,10 +156,7 @@ export function PairingLogsTable() {
     try {
       setLoading(true);
       setError(null);
-      const data = await getPairingLogs(
-        dateFrom || undefined,
-        dateTo || undefined
-      );
+      const data = await getPairingLogs(dateFrom, dateTo);
       setLogs(data);
     } catch (err) {
       console.error("Error refreshing pairing logs:", err);

@@ -30,7 +30,9 @@ import {
   getIncomingPairingMatches,
   IncomingPairingMatch,
 } from "@/lib/actions/pairing.actions";
-import { updatePairingMatchStatus } from "@/lib/actions/pairing.server.actions";
+import { updatePairingMatchStatus } from "@/lib/actions/pairing.actions";
+// import { updatePairingMatchStatus } from "@/lib/actions/pairing.server.actions";
+
 import toast from "react-hot-toast";
 
 export function PairingInterface() {
@@ -67,8 +69,6 @@ export function PairingInterface() {
       error: (err) =>
         `Failed to ${status.slice(0, -2)} pairing: ${err.message}`,
     });
-
-    
   };
 
   return (

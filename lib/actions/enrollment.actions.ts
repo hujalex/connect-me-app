@@ -30,7 +30,6 @@ import {
   setHours,
   setMinutes,
 } from "date-fns"; // Only use date-fns
-import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import ResetPassword from "@/app/(public)/set-password/page";
 import { getStudentSessions } from "./student.actions";
 import { date } from "zod";
@@ -39,7 +38,6 @@ import toast from "react-hot-toast";
 import { DatabaseIcon } from "lucide-react";
 import { SYSTEM_ENTRYPOINTS } from "next/dist/shared/lib/constants";
 import { Table } from "../supabase/tables";
-import Availability from "@/components/student/AvailabilityFormat";
 // import { getMeeting } from "./meeting.actions";
 
 const supabase = createClientComponentClient({
@@ -133,7 +131,7 @@ export const getOverlappingAvailabilites = async (
     startTime: string;
     endTime: string;
   }[]
-) => {
+): Promise<Availability[] | undefined> => {
   try {
     console.log(tutorAvailability);
     console.log(studentAvailability);

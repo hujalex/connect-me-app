@@ -28,6 +28,12 @@ import { Check, ChevronDown, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getAllProfiles } from "@/lib/actions/admin.actions";
 import { Profile } from "@/types";
+import { createAdminConversation } from "@/lib/actions/chat.server.actions";
+import toast from "react-hot-toast";
+import { fetchAdminConversations } from "@/lib/actions/chat.actions";
+import { AdminConversation } from "@/types/chat";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 // Sample profiles data - replace with your actual data source
 // const profiles = [
@@ -73,17 +79,23 @@ const existingConversations = [
 ];
 
 export function AdminConversationManager() {
-  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
+  const [selectedProfileUserId, setSelectedProfileUserId] =
+    useState<string>("");
   const [openProfileOptions, setOpenProfileOptions] = useState(false);
   const [profileSearch, setProfileSearch] = useState("");
   const [conversationTitle, setConversationTitle] = useState("");
   const [conversationDescription, setConversationDescription] = useState("");
+  const [existingConversations, setExistingConversations] =
+    useState<AdminConversation[]>();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const selectedProfile = profiles.find(
-    (profile) => profile.id === selectedProfileId
+    (profile) => profile.userId === selectedProfileUserId
   );
 
+  const router = useRouter();
+
   useEffect(() => {
+    //load all profiles to select to create new conversation
     (async () => {
       const [tutors, students] = await Promise.all([
         getAllProfiles("Tutor"),
@@ -94,22 +106,36 @@ export function AdminConversationManager() {
       }
       setProfiles([...tutors, ...students]);
     })();
+
+    //load all admin conversations
+    (async () => {
+      const conversations = await fetchAdminConversations();
+      if (!conversations) return;
+      setExistingConversations(conversations);
+      console.log("retrieved conversations ", conversations);
+    })();
   }, []);
 
   const handleCreateConversation = () => {
-    if (!selectedProfileId) {
-      return;
-    }
+    if (!selectedProfileUserId) return;
+    const promise = createAdminConversation(selectedProfileUserId);
+    toast.promise(promise, {
+      success: "Successfully created conversation",
+      error: "Failed to create conversation",
+      loading: "Creating...",
+    });
+
+    promise.then(() => router.refresh());
 
     // Handle conversation creation logic here
     console.log("Creating conversation:", {
-      profileId: selectedProfileId,
+      profileId: selectedProfileUserId,
       title: conversationTitle,
       description: conversationDescription,
     });
 
     // Reset form
-    setSelectedProfileId("");
+    setSelectedProfileUserId("");
     setConversationTitle("");
     setConversationDescription("");
     setProfileSearch("");
@@ -200,14 +226,14 @@ export function AdminConversationManager() {
                                   profile.role,
                                 ]}
                                 onSelect={() => {
-                                  setSelectedProfileId(profile.id);
+                                  setSelectedProfileUserId(profile.userId);
                                   setOpenProfileOptions(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    selectedProfileId === profile.id
+                                    selectedProfileUserId === profile.id
                                       ? "opacity-100"
                                       : "opacity-0"
                                   )}
@@ -238,7 +264,7 @@ export function AdminConversationManager() {
                 <div className="flex gap-3 pt-4">
                   <Button
                     onClick={handleCreateConversation}
-                    disabled={!!selectedProfileId}
+                    disabled={!selectedProfileUserId}
                     className="flex-1"
                   >
                     Create Conversation
@@ -246,7 +272,7 @@ export function AdminConversationManager() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      setSelectedProfileId("");
+                      setSelectedProfileUserId("");
                       setConversationTitle("");
                       setConversationDescription("");
                       setProfileSearch("");
@@ -266,14 +292,8 @@ export function AdminConversationManager() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-medium">
-                      {selectedProfile.avatar}
-                    </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium">
-                          {selectedProfile.name}
-                        </span>
                         <span className="text-sm text-muted-foreground">•</span>
                         <span className="text-sm text-muted-foreground">
                           {selectedProfile.role}
@@ -301,22 +321,20 @@ export function AdminConversationManager() {
                 <CardDescription>Your ongoing conversations</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {existingConversations.map((conversation) => (
-                  <div
-                    key={conversation.id}
+                {existingConversations?.map((conversation) => (
+                  <Link
+                    href={`/dashboard/chats/${conversation.conversation_id}`}
+                    key={conversation.conversation_id}
                     className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">
-                        {conversation.personName}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {conversation.lastMessage}
+                        {`${conversation.participants[0].first_name} ${conversation.participants[0].last_name}`}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 ))}
-                {existingConversations.length === 0 && (
+                {existingConversations?.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No conversations yet</p>

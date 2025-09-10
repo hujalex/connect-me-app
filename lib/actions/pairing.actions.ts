@@ -7,10 +7,17 @@ import { getAccountEnrollments } from "./enrollments.action";
 import { Table } from "../supabase/tables";
 import { PairingLogSchemaType } from "../pairing/types";
 import { Person } from "@/types/enrollment";
-import { Availability } from "@/types";
+import { Availability, Profile } from "@/types";
 import { ProfilePairingMetadata } from "@/types/profile";
 import axios, { AxiosResponse } from "axios"; // Not used, can be removed
 import { toast } from "react-hot-toast";
+import { TutorMatchingNotificationEmailProps } from "@/components/emails/tutor-matching-notification";
+import { sendPairingEmail } from "./email.server.actions";
+import { addEnrollment } from "./admin.actions";
+import { getOverlappingAvailabilites } from "./enrollment.actions";
+import { getSupabase } from "../supabase-server/serverClient";
+import { timeStrToHours } from "../utils";
+import { number } from "zod";
 
 export const getAllPairingRequests = async (
   profileType: "student" | "tutor"
@@ -185,4 +192,296 @@ export const handleResolveQueues = () => {
     error: "Failed to run pairing process",
     loading: "Pairing...",
   });
+};
+
+export const findAvailableSessionTimes = async () => {
+  try {
+    for (let i = 0; i < 1000; ++i) {}
+  } catch (error) {}
+};
+
+// Function to convert time string to minutes since midnight
+function timeToMinutes(timeString: string): number {
+  const [hours, minutes, seconds] = timeString.split(":").map(Number);
+  return hours * 60 + minutes + seconds / 60;
+}
+
+// Function to convert minutes back to time string
+function minutesToTime(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = Math.floor(totalMinutes % 60);
+  const seconds = Math.floor((totalMinutes % 1) * 60);
+
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+}
+
+// Main function to get average time floored to hours with 1-hour duration
+function getAverageTimeWithDuration(
+  startTime: string,
+  endTime: string,
+  day: string
+): {
+  startTime: string;
+  endTime: string;
+  day: string;
+} {
+  // Convert both times to minutes
+  const startMinutes = timeToMinutes(startTime);
+  const endMinutes = timeToMinutes(endTime);
+
+  // Calculate average
+  const averageMinutes = (startMinutes + endMinutes) / 2;
+
+  // Floor to nearest hour
+  const flooredHour = Math.floor(averageMinutes / 60);
+  const flooredStartMinutes = flooredHour * 60;
+
+  // Add 1 hour for end time
+  const flooredEndMinutes = flooredStartMinutes + 60;
+
+  return {
+    startTime: minutesToTime(flooredStartMinutes),
+    endTime: minutesToTime(flooredEndMinutes),
+    day: day,
+  };
+}
+
+const isOverlap = (
+  start1: number,
+  end1: number,
+  start2: number,
+  end2: number
+) => {
+  try {
+    return start1 < end2 && start2 < end1;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getAvailableMeetingLink = async (
+  start: string,
+  end: string,
+  day: string
+) => {
+  try {
+    console.log("Input:", { start, end, day });
+
+    // Get all enrollments since we can't easily filter JSON arrays in Supabase
+    const { data: allEnrollments, error } = await supabase
+      .from("Enrollments")
+      .select("meetingId, availability");
+
+    if (error) throw error;
+
+    console.log("All enrollments:", allEnrollments?.length);
+
+    // Filter in JavaScript for arrays
+    const availableMeetings =
+      allEnrollments?.filter((enrollment) => {
+        // Check if this enrollment has any availability slots for the requested day
+        const daySlots = enrollment.availability.filter(
+          (slot: { day: string }) => slot.day === day
+        );
+
+        if (daySlots.length === 0) {
+          // No availability for this day - consider it available
+          return true;
+        }
+
+        // Check if ALL slots for this day have no overlap with requested time
+        const hasConflict = daySlots.some(
+          (slot: { startTime: string; endTime: string }) => {
+            // Two ranges overlap if: slot.start < end AND slot.end > start
+            const overlap = slot.startTime < end && slot.endTime > start;
+            return overlap;
+          }
+        );
+
+        // Return true if NO conflict (available)
+        return !hasConflict;
+      }) || [];
+
+    console.log(
+      "Available meetings:",
+      availableMeetings.map((m) => m.meetingId)
+    );
+    console.log(availableMeetings);
+    return availableMeetings.length > 0 ? availableMeetings[0] : null;
+  } catch (error) {
+    console.error("Full error:", error);
+    throw error;
+  }
+};
+
+export const getAutoAvailableSessionTimes = async (
+  start: string,
+  end: string,
+  day: string
+) => {
+  try {
+    let autoAvailability = null;
+    let meetingId = null;
+
+    for (let i = 0; i < 10; ++i) {
+      autoAvailability = await getAverageTimeWithDuration(start, end, day);
+      meetingId = await getAvailableMeetingLink(
+        autoAvailability.startTime,
+        autoAvailability.endTime,
+        autoAvailability.day
+      );
+      if (meetingId)
+        return { availability: autoAvailability, meetingId: meetingId };
+    }
+    return null;
+  } catch (error) {}
+};
+
+export const updatePairingMatchStatus = async (
+  profileId: string,
+  matchId: string,
+  status: "accepted" | "rejected"
+) => {
+  // if (
+  //   !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  //   !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // ) {
+  //   throw new Error("Missing Supabase environment variables");
+  // }
+  // console.log("logs fine here!");
+  // const supabase = await createServerClient();
+  //
+  const updateResponse = await supabase
+    .from("pairing_matches")
+    .update({ tutor_status: status })
+    .eq("id", matchId)
+    .eq("tutor_id", profileId);
+  if (updateResponse.error) {
+    console.log("ERROR: ", updateResponse.error);
+  }
+
+  const { data, error } = await supabase
+    .rpc("get_pairing_match", {
+      match_id: matchId,
+    })
+    .single();
+
+  if (error) return console.error(error);
+  const pairingMatch = data as IncomingPairingMatch;
+  console.log("data", pairingMatch);
+  const { student, tutor } = pairingMatch;
+  if (status === "accepted") {
+    // create new unique student tutor pairing
+    const createdPairingResult = await supabase.from("Pairings").insert([
+      {
+        student_id: student.id,
+        tutor_id: tutor.id,
+      },
+    ]);
+
+    if (tutor.availability || student.availability) {
+      const availabilities = await getOverlappingAvailabilites(
+        tutor.availability!,
+        student.availability!
+      );
+
+      if (availabilities) {
+        const firstAvailability = availabilities[0];
+        if (!firstAvailability) return;
+
+        const autoAvailability = await getAutoAvailableSessionTimes(
+          firstAvailability.startTime,
+          firstAvailability.endTime,
+          firstAvailability.day
+        );
+
+        console.log(autoAvailability);
+
+        if (autoAvailability) {
+          const result = await addEnrollment(
+            {
+              student: student as unknown as Profile,
+              tutor: tutor as unknown as Profile,
+              availability: [autoAvailability.availability],
+              meetingId: "",
+              summerPaused: false,
+              duration: 1,
+              startDate: new Date().toISOString(),
+              endDate: null,
+              summary: "Automatically Created Enrollment",
+              frequency: "weekly",
+            },
+            true
+          );
+        } else {
+          console.warn("failed to automatically create enrollment");
+        }
+      }
+
+      //auto select first availability & create enrollment
+    }
+
+    const createdPairingError = createdPairingResult.error;
+    if (createdPairingError) {
+      if (createdPairingError?.code === "23505") {
+        throw new Error("student - tutor pairing already exists");
+      }
+      console.error(createdPairingResult.error);
+      throw new Error("failed to create pairings");
+    }
+
+    const emailData = {
+      studentName: `${student.first_name} ${student.last_name}`,
+      studentGender: student.gender ?? "male",
+      parentName: `Parent Name`,
+    } as TutorMatchingNotificationEmailProps;
+
+    //send respective pairing email to student and tutor
+
+    // if (status == "accepted") {
+    //   await axios.post("/api/email/pairing?type=match-accepted", {
+    //     emailType: "match-accepted",
+    //     data: emailData,
+    //   });
+    // }
+
+    console.log("student", student);
+    // Replace the fetch with:
+    await sendPairingEmail("match-accepted", emailData);
+
+    const log = await supabase.from("pairing_logs").insert([
+      {
+        type: "pairing-match-accepted",
+        message: `${tutor.first_name} ${tutor.last_name} has accepted ${student.first_name} ${student.last_name} as a student`,
+        error: false,
+        metadata: {
+          profile_id: profileId,
+        },
+      } as PairingLogSchemaType,
+    ]);
+
+    console.log("LOG ", log);
+
+    //reset tutor and student status to be auto placed in que
+  } else if (status === "rejected") {
+    const { data, error } = await supabase
+      .from("pairing_requests")
+      .update({
+        status: "pending",
+      })
+      .in("user_id", [student.id, tutor.id]);
+
+    console.log(data, error);
+    if (!error)
+      await supabase.from("pairing_logs").insert([
+        {
+          type: "pairing-match-rejected",
+          message: `${tutor.first_name} ${tutor.last_name} has declined ${student.first_name} ${student.last_name} as a student`,
+          error: false,
+          metadata: {
+            profile_id: profileId,
+          },
+        } as PairingLogSchemaType,
+      ]);
+  }
 };

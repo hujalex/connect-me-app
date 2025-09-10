@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { config } from "@/config";
+import { logZoomMetadata } from "@/lib/actions/zoom.server.actions";
 // import { logZoomMetadata } from "@/lib/actions/zoom.server.actions";
 // import { getActiveSessionFromMeetingID } from "@/lib/actions/session.server.actions";
 
@@ -70,46 +71,31 @@ export async function POST(
         const participant = payload?.object?.participant;
         console.log("JOINED: ", participant);
 
-        // await logZoomMetadata({
-        //   // id: uuidv4(),
-        //   session_id: payload?.object?.id,
-        //   user_name: participant?.user_name,
-        //   participant_uuid: participant?.user_id,
-        //   email: participant?.email,
-        //   date_time: participant?.join_time ?? new Date().toISOString(),
-        // });
+        await logZoomMetadata({
+          // id: uuidv4(),
+          session_id: payload?.object?.id,
+          user_name: participant?.user_name,
+          participant_uuid: participant?.user_id,
+          email: participant?.email,
+          date_time: participant?.join_time ?? new Date().toISOString(),
+        });
       }
       break;
 
     case "meeting.participant_left":
       {
         const participant = payload?.object?.participant;
-        console.log("LEFT: ", participant);
-        // await logZoomMetadata({
-        //   // id: uuidv4(),
-        //   session_id: payload?.object?.id,
-        //   user_name: participant?.user_name,
-        //   participant_uuid: participant?.user_id,
-        //   email: participant?.email,
-        //   date_time: participant?.join_time ?? new Date().toISOString(),
-        // });
-        //Needs to be retested on new schema
 
-        // const { error } = await supabase
-        //   .from("session_participation")
-        //   .update({
-        //     leave_time: participant?.leave_time ?? new Date().toISOString(),
-        //     leave_reason: participant?.leave_reason ?? null,
-        //   })
-        //   .eq("participant_uuid", participant?.user_id)
-        //   .eq("session_id", payload?.object?.id);
+        await logZoomMetadata({
+          // id: uuidv4(),
+          session_id: payload?.object?.id,
+          user_name: participant?.user_name,
+          participant_uuid: participant?.user_id,
+          email: participant?.email,
+          date_time: participant?.join_time ?? new Date().toISOString(),
+        });
 
-        // if (error) {
-        //   console.error("Error updating participant leave:", error);
-        //   return new Response("Update failed", { status: 500 });
-        // }
-
-        // console.log("Participant left:", participant?.user_name);
+        console.log("Participant left:", participant?.user_name);
       }
       break;
 

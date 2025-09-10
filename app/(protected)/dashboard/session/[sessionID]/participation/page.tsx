@@ -26,7 +26,6 @@ interface ParticipantEvent {
   participantId: string;
   name: string;
   email: string;
-  avatar?: string;
   action: "joined" | "left";
   timestamp: Date;
 }
@@ -46,10 +45,10 @@ interface ParticipantSummary {
 export default function MeetingParticipation() {
   const [meetingData] = useState({
     meetingId: "zoom-meeting-123",
-    meetingTitle: "Aaron & Alex Tutoring Session",
+    meetingTitle: "Tutoring Session",
     startTime: new Date("2025-01-15T10:00:00"),
     endTime: new Date("2025-01-15T11:30:00"),
-    totalDuration: 90, // minutes
+    totalDuration: 60, // minutes
   });
 
   const [events] = useState<ParticipantEvent[]>([
@@ -58,7 +57,7 @@ export default function MeetingParticipation() {
       participantId: "user1",
       name: "Sarah Johnson",
       email: "sarah@company.com",
-      avatar: "/placeholder.svg?height=40&width=40",
+
       action: "joined",
       timestamp: new Date("2025-01-15T10:00:00"),
     },
@@ -67,7 +66,7 @@ export default function MeetingParticipation() {
       participantId: "user2",
       name: "Mike Chen",
       email: "mike@company.com",
-      avatar: "/placeholder.svg?height=40&width=40",
+
       action: "joined",
       timestamp: new Date("2025-01-15T10:02:00"),
     },
@@ -76,7 +75,7 @@ export default function MeetingParticipation() {
       participantId: "user3",
       name: "Emily Rodriguez",
       email: "emily@company.com",
-      avatar: "/placeholder.svg?height=40&width=40",
+
       action: "joined",
       timestamp: new Date("2025-01-15T10:05:00"),
     },
@@ -85,7 +84,7 @@ export default function MeetingParticipation() {
       participantId: "user2",
       name: "Mike Chen",
       email: "mike@company.com",
-      avatar: "/placeholder.svg?height=40&width=40",
+
       action: "left",
       timestamp: new Date("2025-01-15T10:45:00"),
     },
@@ -94,7 +93,7 @@ export default function MeetingParticipation() {
       participantId: "user4",
       name: "David Kim",
       email: "david@company.com",
-      avatar: "/placeholder.svg?height=40&width=40",
+
       action: "joined",
       timestamp: new Date("2025-01-15T10:15:00"),
     },
@@ -103,7 +102,7 @@ export default function MeetingParticipation() {
       participantId: "user2",
       name: "Mike Chen",
       email: "mike@company.com",
-      avatar: "/placeholder.svg?height=40&width=40",
+
       action: "joined",
       timestamp: new Date("2025-01-15T11:00:00"),
     },
@@ -112,7 +111,7 @@ export default function MeetingParticipation() {
       participantId: "user3",
       name: "Emily Rodriguez",
       email: "emily@company.com",
-      avatar: "/placeholder.svg?height=40&width=40",
+
       action: "left",
       timestamp: new Date("2025-01-15T11:25:00"),
     },
@@ -128,7 +127,6 @@ export default function MeetingParticipation() {
           id: event.participantId,
           name: event.name,
           email: event.email,
-          avatar: event.avatar,
           totalDuration: 0,
           joinCount: 0,
           currentlyInMeeting: false,
@@ -346,10 +344,6 @@ export default function MeetingParticipation() {
                       className={`w-2 h-2 rounded-full ${event.action === "joined" ? "bg-green-500" : "bg-red-500"}`}
                     />
                     <Avatar className="w-8 h-8">
-                      <AvatarImage
-                        src={event.avatar || "/placeholder.svg"}
-                        alt={event.name}
-                      />
                       <AvatarFallback className="text-xs">
                         {event.name
                           .split(" ")

@@ -29,7 +29,6 @@ import {
   setHours,
   setMinutes,
 } from "date-fns"; // Only use date-fns
-import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import ResetPassword from "@/app/(public)/set-password/page";
 import { getStudentSessions } from "./student.actions";
 import { date } from "zod";
@@ -50,7 +49,7 @@ const supabase = createClientComponentClient({
  * @param requestedDate - The date to search around for existing sessions
  * @returns Promise resolving to array of sessions or undefined
  */
- export const fetchDaySessionsFromSchedule = async (requestedDate: Date) => {
+export const fetchDaySessionsFromSchedule = async (requestedDate: Date) => {
   if (requestedDate) {
     try {
       const startDateSearch = addHours(requestedDate, -12).toISOString();

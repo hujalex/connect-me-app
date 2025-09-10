@@ -1,6 +1,6 @@
 "use server";
 
-import { Meeting } from "@/types";
+import { Meeting, Profile } from "@/types";
 import { SharedPairing } from "@/types/pairing";
 import { createClient } from "@supabase/supabase-js";
 import axios from "axios";
@@ -13,6 +13,8 @@ import { NextResponse } from "next/server";
 import { PairingLogSchemaType } from "../pairing/types";
 import { getSupabase } from "../supabase-server/serverClient";
 import { sendPairingEmail } from "./email.server.actions";
+import { addEnrollment, createEnrollment } from "./admin.actions";
+import { getOverlappingAvailabilites } from "./enrollment.actions";
 
 export const getPairingFromEnrollmentId = async (enrollmentId: string) => {
   try {
@@ -192,13 +194,47 @@ export const updatePairingMatchStatus = async (
   console.log("data", pairingMatch);
   const { student, tutor } = pairingMatch;
   if (status === "accepted") {
-    //create new unique student tutor pairing
+    // create new unique student tutor pairing
     const createdPairingResult = await supabase.from("Pairings").insert([
       {
         student_id: student.id,
         tutor_id: tutor.id,
       },
     ]);
+
+    if (tutor.availability || student.availability) {
+      const availabilities = await getOverlappingAvailabilites(
+        tutor.availability!,
+        student.availability!
+      );
+
+      if (availabilities) {
+        const firstAvailability = availabilities[0];
+        if (!firstAvailability) return;
+
+        const startDate = "";
+        const endDate = "";
+
+        //auto select first availability & create enrollment
+        const result = await addEnrollment(
+          {
+            student: student as unknown as Profile,
+            tutor: tutor as unknown as Profile,
+            availability: availabilities,
+            meetingId: "",
+            summerPaused: false,
+            duration: 60,
+            startDate,
+            endDate,
+            summary: "Automatically Created Enrollment",
+            frequency: "weekly",
+          },
+          true
+        );
+      }
+    } else {
+      console.warn("failed to automatically create enrollment");
+    }
 
     const createdPairingError = createdPairingResult.error;
     if (createdPairingError) {

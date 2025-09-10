@@ -50,7 +50,7 @@ export type ChatRoomProps = {
   initialUsers?: User[];
   onSendMessage?: (message: string) => void;
   onFileUpload?: (file: File) => void;
-  announcements?: boolean;
+  type: "pairing" | "announcements" | "admin";
 };
 
 export function ChatRoom({
@@ -62,7 +62,7 @@ export function ChatRoom({
   initialUsers = [],
   onSendMessage,
   onFileUpload,
-  announcements = false,
+  type,
 }: ChatRoomProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [users, setUsers] = useState<Record<string, User>>({});
@@ -131,10 +131,8 @@ export function ChatRoom({
 
           if (isMounted) {
             setUsers(chatRoomUsers);
-            console.log("AFTER fetching users", chatRoomUsers);
           }
-        } else if (announcements) {
-          console.log("MAKING AN ANNOUNCEMENT");
+        } else if (type === "announcements" || type === "admin") {
           const administrators = await fetchAdmins();
 
           const adminUsers =
@@ -149,10 +147,16 @@ export function ChatRoom({
               },
               {} as Record<string, User>
             ) || {};
-
+          alert();
           if (isMounted) {
-            setUsers(adminUsers);
-            console.log("AFTER fetching announcement users", adminUsers);
+            setUsers({
+              ...adminUsers,
+              [profile.id]: {
+                id: profile.id,
+                name: `${profile.firstName} ${profile.lastName}`,
+                role: profile.role.toLowerCase(),
+              },
+            });
           }
         }
       } catch (error) {
@@ -165,17 +169,13 @@ export function ChatRoom({
     };
 
     // Only fetch users if we have pairing or it's announcements
-    if (pairing || announcements) {
-      fetchUsers();
-    } else {
-      // If no pairing and not announcements, we're not loading users
-      setIsLoadingUsers(false);
-    }
+
+    fetchUsers();
 
     return () => {
       isMounted = false;
     };
-  }, [pairing, announcements]);
+  }, [pairing, type, profile]);
 
   // Load messages and set up subscriptions
   useEffect(() => {
@@ -192,8 +192,6 @@ export function ChatRoom({
           .select("*")
           .eq("room_id", roomId)
           .order("created_at", { ascending: true });
-
-        console.log("Data: ", data);
 
         if (error) throw error;
 
@@ -249,7 +247,7 @@ export function ChatRoom({
     e.preventDefault();
 
     if (
-      (announcements && profile?.role !== "Admin") ||
+      (type === "announcements" && profile?.role !== "Admin") ||
       !messageInput.trim() ||
       !profile
     )
@@ -261,8 +259,6 @@ export function ChatRoom({
         user_id: profile.id,
         content: messageInput,
       };
-
-      console.log("trying: ", newMessage);
 
       const { error } = await supabase.from("messages").insert([newMessage]);
 
@@ -279,7 +275,7 @@ export function ChatRoom({
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (announcements || !profile) return;
+    if (type === "announcements" || !profile) return;
 
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -370,81 +366,82 @@ export function ChatRoom({
 
   if (!profile) return <></>;
 
+  console.log("result", users);
+
   return (
     <div
-      className={`flex h-full border rounded-lg overflow-hidden ${announcements ? "" : "bg-white"}`}
+      className={`flex min-h-[80dvh] border rounded-lg overflow-hidden ${type === "announcements" ? "" : "bg-white"}`}
     >
       {/* Users sidebar */}
-      {!announcements && (
-        <div
-          className={`w-64 border-r hidden md:block ${announcements ? "" : "bg-gray-50"}`}
-        >
-          <div className="p-4 border-b">
-            <div className="flex items-center gap-2">
-              {announcements && <Megaphone className="h-5 w-5 " />}
-              <h3 className="font-semibold text-lg">
-                {announcements ? roomName : "Participants"}
-              </h3>
-            </div>
+
+      <div
+        className={`w-64 border-r hidden md:block ${type === "announcements" ? "" : "bg-gray-50"}`}
+      >
+        <div className="p-4 border-b">
+          <div className="flex items-center gap-2">
+            {type === "announcements" && <Megaphone className="h-5 w-5 " />}
+            <h3 className="font-semibold text-lg">
+              {type === "announcements" ? roomName : "Participants"}
+            </h3>
           </div>
-          <ScrollArea className="h-full p-4">
-            {isLoadingUsers ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-20" />
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              Object.values(users).map((user) => (
-                <div key={user.id} className="flex items-center gap-3 mb-3">
-                  <div className="relative">
-                    <Avatar>
-                      <AvatarImage
-                        src={user?.avatar_url || "/placeholder.svg"}
-                      />
-                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                    </Avatar>
-                    {user.online && (
-                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{user.name}</p>
-                    <Badge
-                      variant={user.role === "tutor" ? "default" : "secondary"}
-                      className="text-xs"
-                    >
-                      {user.role}
-                    </Badge>
+        </div>
+        <ScrollArea className="h-full p-4">
+          {isLoadingUsers ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-3 w-16" />
                   </div>
                 </div>
-              ))
-            )}
-          </ScrollArea>
-        </div>
-      )}
+              ))}
+            </div>
+          ) : (
+            Object.values(users).map((user) => (
+              <div key={user.id} className="flex items-center gap-3 mb-3">
+                <div className="relative">
+                  <Avatar>
+                    <AvatarImage src={user?.avatar_url || "/placeholder.svg"} />
+                    <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                  </Avatar>
+                  {user.online && (
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{user.name}</p>
+                  <Badge
+                    variant={user.role === "tutor" ? "default" : "secondary"}
+                    className="text-xs"
+                  >
+                    {user.role}
+                  </Badge>
+                </div>
+              </div>
+            ))
+          )}
+        </ScrollArea>
+      </div>
 
       {/* Chat area */}
       <div className="flex-1 flex flex-col">
         {/* Chat header */}
         <div
-          className={`p-4 border-b flex justify-between items-center ${announcements ? "" : ""}`}
+          className={`p-4 border-b flex justify-between items-center ${type === "announcements" ? "" : ""}`}
         >
           <div>
             <div className="flex items-center gap-2">
-              {announcements && <Megaphone className="h-5 w-5 " />}
+              {type === "announcements" && <Megaphone className="h-5 w-5 " />}
               <h2 className="font-semibold text-lg">
-                {announcements ? roomName : (roomName ?? `Chat Room`)}
+                {type === "announcements"
+                  ? roomName
+                  : (roomName ?? `Chat Room`)}
               </h2>
             </div>
             <p className="text-sm text-gray-500">
-              {announcements
+              {type === "announcements"
                 ? "Read-only announcements channel"
                 : `${Object.keys(users).length} participants`}
             </p>
@@ -460,7 +457,7 @@ export function ChatRoom({
             }}
             className="md:hidden"
           >
-            {announcements ? "Viewers" : "Participants"}
+            {type === "announcements" ? "Viewers" : "Participants"}
           </Button>
         </div>
 
@@ -606,7 +603,7 @@ export function ChatRoom({
         </ScrollArea>
 
         {/* Message input */}
-        {announcements && profile.role !== "Admin" ? (
+        {type === "announcements" && profile.role !== "Admin" ? (
           <div className="p-4 border-t ">
             <div className="flex items-center justify-center gap-2 ">
               <Megaphone className="h-4 w-4" />
@@ -658,9 +655,9 @@ export function ChatRoom({
         <div className="modal-box">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              {announcements && <Megaphone className="h-5 w-5 " />}
+              {type === "announcements" && <Megaphone className="h-5 w-5 " />}
               <h3 className="font-semibold text-lg">
-                {announcements ? "Viewers" : "Participants"}
+                {type === "announcements" ? "Viewers" : "Participants"}
               </h3>
             </div>
             <form method="dialog">
